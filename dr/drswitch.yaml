@@ -1,0 +1,64 @@
+# drswitch configuration for the prod / prod-dr pair.
+# Paths are relative to this file.
+git:
+  repoPath: ..
+  flagFile: dr/active-site.yaml
+  flagKey: dr.activeSite
+  remote: origin
+  branch: main
+  # Push right after committing. Can also be set per run with --push.
+  push: false
+
+sites:
+  primary:
+    region: eu-central-1
+    # Pre-switch probe: platform health, not the app. Here the API server of
+    # the primary cluster, reached with the kubeconfig context below.
+    health:
+      kube:
+        context: prod-primary
+        path: /readyz
+      timeout: 5s
+    # Post-flip probe: goes green once the app runs on this site again.
+    ready:
+      url: https://primary.orders.example.com/healthz
+      timeout: 5s
+  dr:
+    region: eu-west-1
+    health:
+      kube:
+        context: prod-dr
+        path: /readyz
+      timeout: 5s
+    ready:
+      url: https://dr.orders.example.com/healthz
+      timeout: 5s
+
+# How long to wait for the ready probe after the flag flips.
+ready:
+  timeout: 10m
+  interval: 10s
+
+# Keep the old site running this long after DNS moved. Use at least the
+# record TTL plus some margin for clients that cache longer.
+drain: 60s
+
+# Route53 weighted records managed directly by drswitch.
+#
+# The charts already publish external-dns weights derived from the same flag,
+# so in a planned switch DNS follows Git on its own. drswitch sets the weights
+# directly as well so that DNS moves even when the failed region cannot run
+# its own external-dns (the usual case in a real regional outage). Both
+# writers derive the weight from the same flag, so they converge instead of
+# fighting. Use --skip-dns to leave DNS to external-dns for a single run.
+route53:
+  enabled: true
+  profile: ""
+  hostedZoneID: Z0000000000000EXAMPLE
+  recordName: orders.example.com
+  recordType: CNAME
+  setIdentifiers:
+    primary: primary
+    dr: dr
+  activeWeight: 100
+  standbyWeight: 0

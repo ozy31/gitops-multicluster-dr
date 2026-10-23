@@ -1,0 +1,43 @@
+# drswitch configuration for the kind playground (hack/kind-up.sh).
+git:
+  repoPath: ..
+  flagFile: dr/active-site.yaml
+  flagKey: dr.activeSite
+  remote: origin
+  branch: main
+  # ArgoCD only sees pushed commits.
+  push: true
+
+sites:
+  primary:
+    region: local-a
+    health:
+      kube:
+        context: kind-gitops-primary
+        path: /readyz
+    # The orders-api Service, reached through the API server proxy, so no
+    # ingress or port-forward is needed.
+    ready:
+      kube:
+        context: kind-gitops-primary
+        path: /api/v1/namespaces/orders-api/services/orders-api:http/proxy/readyz
+  dr:
+    region: local-b
+    health:
+      kube:
+        context: kind-gitops-dr
+        path: /readyz
+    ready:
+      kube:
+        context: kind-gitops-dr
+        path: /api/v1/namespaces/orders-api/services/orders-api:http/proxy/readyz
+
+# ArgoCD polls Git every 60-180s without a webhook; allow for that.
+ready:
+  timeout: 6m
+  interval: 10s
+
+drain: 15s
+
+route53:
+  enabled: false
