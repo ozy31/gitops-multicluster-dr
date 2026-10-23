@@ -1,0 +1,6 @@
+# kind kubelets use self-signed serving certificates.
+replicas: 1
+podDisruptionBudget:
+  enabled: false
+args:
+  - --kubelet-insecure-tls

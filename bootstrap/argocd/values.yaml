@@ -1,0 +1,27 @@
+# Values for the argo-cd Helm chart (https://argoproj.github.io/argo-helm)
+# on the management cluster.
+#
+#   helm upgrade --install argocd argo/argo-cd -n argocd --create-namespace \
+#     -f bootstrap/argocd/values.yaml
+configs:
+  params:
+    # Progressive sync (RollingSync) for ApplicationSets is opt-in. Leave it
+    # off unless you adopt the strategy block in applicationsets/apps.yaml;
+    # read the DR ordering caveat in README.md first.
+    applicationsetcontroller.enable.progressive.syncs: false
+  cm:
+    # Faster reaction to the DR flag than the 3m default. A Git webhook is
+    # better still; see README.md.
+    timeout.reconciliation: 60s
+
+applicationSet:
+  replicas: 2
+
+controller:
+  replicas: 1
+
+repoServer:
+  replicas: 2
+
+redis-ha:
+  enabled: false

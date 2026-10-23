@@ -1,0 +1,73 @@
+# Installs cluster addons from upstream Helm charts.
+#
+# matrix(git files x clusters):
+#   1. every platform/addons/<addon>/config.yaml describes one addon
+#      (chart, version, namespace)
+#   2. the clusters generator then selects the clusters that opted in with
+#      the label addons.example.com/<addon>=enabled. The selector uses the
+#      addon name from the first generator.
+#
+# Values are layered per addon:
+#   platform/addons/<addon>/values.yaml
+#   platform/addons/<addon>/values-<env>.yaml       (optional)
+#   platform/addons/<addon>/clusters/<cluster>.yaml (optional)
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform-addons
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - matrix:
+        generators:
+          - git:
+              repoURL: https://github.com/ozy31/gitops-multicluster-dr.git
+              revision: main
+              files:
+                - path: platform/addons/*/config.yaml
+          - clusters:
+              selector:
+                matchLabels:
+                  addons.example.com/{{ .addon.name }}: enabled
+  template:
+    metadata:
+      name: '{{ .addon.name }}-{{ .name }}'
+      labels:
+        addon: '{{ .addon.name }}'
+        env: '{{ .metadata.labels.env }}'
+        role: '{{ .metadata.labels.role }}'
+    spec:
+      project: platform
+      sources:
+        - repoURL: '{{ .addon.repoURL }}'
+          chart: '{{ .addon.chart }}'
+          targetRevision: '{{ .addon.version }}'
+          helm:
+            releaseName: '{{ .addon.name }}'
+            ignoreMissingValueFiles: true
+            valueFiles:
+              - '$values/platform/addons/{{ .addon.name }}/values.yaml'
+              - '$values/platform/addons/{{ .addon.name }}/values-{{ .metadata.labels.env }}.yaml'
+              - '$values/platform/addons/{{ .addon.name }}/clusters/{{ .name }}.yaml'
+        - repoURL: https://github.com/ozy31/gitops-multicluster-dr.git
+          targetRevision: main
+          ref: values
+      destination:
+        server: '{{ .server }}'
+        namespace: '{{ .addon.namespace }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          # Some addon CRDs (KEDA) exceed the client-side apply annotation limit.
+          - ServerSideApply=true
+        retry:
+          limit: 10
+          backoff:
+            duration: 15s
+            factor: 2
+            maxDuration: 5m

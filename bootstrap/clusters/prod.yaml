@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-prod
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+    env: prod
+    role: primary
+    region: eu-central-1
+    gitops.example.com/workloads: "true"
+    addons.example.com/keda: enabled
+    addons.example.com/metrics-server: enabled
+    addons.example.com/external-dns: enabled
+    addons.example.com/aws-load-balancer-controller: enabled
+type: Opaque
+stringData:
+  name: prod
+  server: https://9747B291DAFB3FAF94B15E0557377D04.gr7.eu-central-1.eks.amazonaws.com
+  config: |
+    {
+      "awsAuthConfig": {
+        "clusterName": "prod-eks",
+        "roleARN": "arn:aws:iam::111111111111:role/argocd-prod-deployer"
+      },
+      "tlsClientConfig": {
+        "insecure": false,
+        "caData": "<base64 cluster CA>"
+      }
+    }

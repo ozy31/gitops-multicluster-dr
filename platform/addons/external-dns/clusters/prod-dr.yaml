@@ -1,0 +1,4 @@
+txtOwnerId: prod-dr
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::111111111111:role/external-dns-prod-dr

@@ -1,0 +1,6 @@
+addon:
+  name: keda
+  namespace: keda
+  repoURL: https://kedacore.github.io/charts
+  chart: keda
+  version: 2.16.1

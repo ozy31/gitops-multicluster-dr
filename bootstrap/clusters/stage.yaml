@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-stage
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+    env: stage
+    role: primary
+    region: eu-central-1
+    gitops.example.com/workloads: "true"
+    addons.example.com/keda: enabled
+    addons.example.com/metrics-server: enabled
+    addons.example.com/ingress-nginx: enabled
+type: Opaque
+stringData:
+  name: stage
+  server: https://17867B9F601319CBBCD163B5D3EBC48B.gr7.eu-central-1.eks.amazonaws.com
+  config: |
+    {
+      "awsAuthConfig": {
+        "clusterName": "stage-eks",
+        "roleARN": "arn:aws:iam::111111111111:role/argocd-stage-deployer"
+      },
+      "tlsClientConfig": {
+        "insecure": false,
+        "caData": "<base64 cluster CA>"
+      }
+    }

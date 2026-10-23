@@ -1,0 +1,9 @@
+provider:
+  name: aws
+sources:
+  - ingress
+policy: upsert-only
+registry: txt
+interval: 1m
+domainFilters:
+  - example.com

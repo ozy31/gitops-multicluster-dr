@@ -1,0 +1,5 @@
+clusterName: prod-dr-eks
+region: eu-west-1
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::111111111111:role/aws-load-balancer-controller-prod-dr

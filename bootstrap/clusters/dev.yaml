@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-dev
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+    env: dev
+    role: primary
+    region: eu-central-1
+    gitops.example.com/workloads: "true"
+    addons.example.com/keda: enabled
+    addons.example.com/metrics-server: enabled
+    addons.example.com/ingress-nginx: enabled
+type: Opaque
+stringData:
+  name: dev
+  server: https://001638A207ADE6789D0AFCC5AF700321.gr7.eu-central-1.eks.amazonaws.com
+  config: |
+    {
+      "awsAuthConfig": {
+        "clusterName": "dev-eks",
+        "roleARN": "arn:aws:iam::111111111111:role/argocd-dev-deployer"
+      },
+      "tlsClientConfig": {
+        "insecure": false,
+        "caData": "<base64 cluster CA>"
+      }
+    }

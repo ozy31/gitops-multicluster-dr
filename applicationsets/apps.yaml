@@ -1,0 +1,120 @@
+# Deploys every directory under apps/ to every workload cluster.
+#
+# matrix(clusters x git directories) yields one Application per
+# (cluster, app) pair:
+#
+#   clusters (label selector)                     apps/*
+#   ---------------------------------------       ------------------
+#   dev        (env=dev,   role=primary)     x    apps/orders-api
+#   stage      (env=stage, role=primary)          apps/events-worker
+#   prod       (env=prod,  role=primary)
+#   prod-dr    (env=prod,  role=dr)
+#
+#   = 8 Applications, e.g. orders-api-prod-dr. env=local is the kind demo
+#   (hack/kind-up.sh) and is absent in a real installation.
+#
+# Helm values are layered per cluster:
+#   apps/<app>/values.yaml
+#   apps/<app>/values-<env>.yaml          e.g. values-prod.yaml
+#   apps/<app>/values-<env>-<role>.yaml   e.g. values-prod-dr.yaml (optional)
+#   dr/active-site.yaml                   the single DR switch
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: apps
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - matrix:
+        generators:
+          - clusters:
+              selector:
+                matchLabels:
+                  gitops.example.com/workloads: "true"
+                matchExpressions:
+                  - key: env
+                    operator: In
+                    values: [local, dev, stage, prod]
+                  - key: role
+                    operator: In
+                    values: [primary, dr]
+          - git:
+              repoURL: https://github.com/ozy31/gitops-multicluster-dr.git
+              revision: main
+              directories:
+                - path: apps/*
+  # Progressive sync (RollingSync) is an opt-in ApplicationSet controller
+  # feature. If enabled, it replaces automated sync on the generated apps and
+  # rolls a change out step by step. Note the ordering trade-off for DR:
+  # the flag file is part of every app's sources, so a flag flip also goes
+  # through these steps. See README.md "Progressive sync".
+  #
+  # strategy:
+  #   type: RollingSync
+  #   rollingSync:
+  #     steps:
+  #       - matchExpressions:
+  #           - {key: env, operator: In, values: [dev]}
+  #       - matchExpressions:
+  #           - {key: env, operator: In, values: [stage]}
+  #       - matchExpressions:
+  #           - {key: env, operator: In, values: [prod]}
+  #         maxUpdate: 1
+  template:
+    metadata:
+      name: '{{ .path.basename }}-{{ .name }}'
+      labels:
+        app.kubernetes.io/name: '{{ .path.basename }}'
+        env: '{{ .metadata.labels.env }}'
+        role: '{{ .metadata.labels.role }}'
+      annotations:
+        notifications.argoproj.io/subscribe.on-sync-failed.slack: deployments
+    spec:
+      project: workloads
+      sources:
+        - repoURL: https://github.com/ozy31/gitops-multicluster-dr.git
+          targetRevision: main
+          path: charts/service
+          helm:
+            releaseName: '{{ .path.basename }}'
+            ignoreMissingValueFiles: true
+            valueFiles:
+              - '$values/{{ .path.path }}/values.yaml'
+              - '$values/{{ .path.path }}/values-{{ .metadata.labels.env }}.yaml'
+              - '$values/{{ .path.path }}/values-{{ .metadata.labels.env }}-{{ .metadata.labels.role }}.yaml'
+              - '$values/dr/active-site.yaml'
+            parameters:
+              - name: site.env
+                value: '{{ .metadata.labels.env }}'
+              - name: site.role
+                value: '{{ .metadata.labels.role }}'
+              - name: site.region
+                value: '{{ .metadata.labels.region }}'
+        - repoURL: https://github.com/ozy31/gitops-multicluster-dr.git
+          targetRevision: main
+          ref: values
+      destination:
+        server: '{{ .server }}'
+        namespace: '{{ .path.basename }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          # Client-side apply on purpose: when a site becomes active the
+          # chart drops Deployment.spec.replicas and client-side apply
+          # removes the field, so the HPA can take over (see
+          # charts/service/templates/hpa.yaml).
+          - ServerSideApply=false
+        retry:
+          limit: 5
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 3m
+      revisionHistoryLimit: 10
+      # No ignoreDifferences for /spec/replicas: the chart omits replicas
+      # whenever an autoscaler owns them, and pins them on the standby.

@@ -1,0 +1,30 @@
+# App of apps. Apply this once to the ArgoCD management cluster:
+#
+#   kubectl apply -n argocd -f bootstrap/root-app.yaml
+#
+# It syncs applicationsets/ (AppProjects + ApplicationSets); the
+# ApplicationSets then generate one Application per (cluster, app) and
+# (cluster, addon) pair. Cluster secrets are NOT managed here; see
+# bootstrap/clusters/README.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ozy31/gitops-multicluster-dr.git
+    targetRevision: main
+    path: applicationsets
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

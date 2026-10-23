@@ -1,0 +1,6 @@
+# Each cluster needs its own owner id so the two sites do not delete each
+# other's weighted records.
+txtOwnerId: prod-primary
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::111111111111:role/external-dns-prod

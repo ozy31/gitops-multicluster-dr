@@ -1,0 +1,8 @@
+# Used in dev/stage and the local kind demo. Prod uses the AWS Load
+# Balancer Controller (ALB) instead; see apps/*/values-prod.yaml.
+controller:
+  replicaCount: 1
+  service:
+    type: ClusterIP
+  metrics:
+    enabled: true

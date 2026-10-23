@@ -1,0 +1,5 @@
+# Lets the aws-sqs-queue trigger use the operator's IRSA / Pod Identity role.
+podIdentity:
+  aws:
+    irsa:
+      enabled: true
