@@ -1,0 +1,20 @@
+# Build output
+/bin/
+/dist/
+*.test
+*.out
+coverage.*
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Helm
+charts/*/charts/
+charts/*/Chart.lock
+
+# Local kubeconfigs and env files
+kubeconfig*
+.env
