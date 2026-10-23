@@ -1,0 +1,22 @@
+dr:
+  managed: true
+  standbyReplicas: 0
+
+serviceAccount:
+  annotations:
+    # IRSA role that can read the queue. Pod Identity works too; then drop
+    # this annotation and keep podIdentityProvider: aws.
+    eks.amazonaws.com/role-arn: arn:aws:iam::111111111111:role/events-worker
+
+autoscaling:
+  keda:
+    minReplicaCount: 1
+    maxReplicaCount: 20
+    podIdentityProvider: aws
+    triggers:
+      - type: aws-sqs-queue
+        useTriggerAuth: true
+        metadata:
+          queueURL: https://sqs.eu-central-1.amazonaws.com/111111111111/orders-events
+          queueLength: "50"
+          awsRegion: eu-central-1

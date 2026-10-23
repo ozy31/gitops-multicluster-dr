@@ -1,0 +1,14 @@
+autoscaling:
+  hpa:
+    minReplicas: 1
+    maxReplicas: 2
+
+# A single replica cannot satisfy a PDB, skip it in dev.
+pdb:
+  enabled: false
+
+topologySpread:
+  enabled: false
+
+ingress:
+  host: orders.dev.example.com

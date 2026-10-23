@@ -1,0 +1,13 @@
+dr:
+  managed: true
+  standbyReplicas: 0
+
+autoscaling:
+  keda:
+    maxReplicaCount: 2
+
+pdb:
+  enabled: false
+
+topologySpread:
+  enabled: false

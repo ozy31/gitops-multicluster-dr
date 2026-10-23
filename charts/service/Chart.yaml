@@ -1,0 +1,11 @@
+apiVersion: v2
+name: service
+description: >-
+  Shared chart for stateless services in a primary/DR cluster pair. Scales
+  to a standby replica count on the inactive site based on dr.activeSite.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+maintainers:
+  - name: Ahmet Ozan Gazi
+    url: https://github.com/ozy31

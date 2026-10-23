@@ -1,0 +1,17 @@
+{{- /* No PDB on a cold standby: with 0 replicas it would only block drains. */}}
+{{- $active := eq (include "service.isActive" .) "true" }}
+{{- if and .Values.pdb.enabled (or $active (gt (int .Values.dr.standbyReplicas) 1)) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "service.fullname" . }}
+  labels:
+    {{- include "service.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "service.selectorLabels" . | nindent 6 }}
+{{- end }}

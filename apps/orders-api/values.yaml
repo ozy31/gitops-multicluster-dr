@@ -1,0 +1,25 @@
+# orders-api: synchronous HTTP API behind an ingress, scaled by CPU (HPA).
+# Rendered with the shared chart in charts/service. podinfo stands in for
+# the real application image.
+image:
+  repository: ghcr.io/stefanprodan/podinfo
+  tag: "6.7.1"
+
+env:
+  PODINFO_UI_MESSAGE: orders-api
+
+autoscaling:
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+pdb:
+  enabled: true
+  maxUnavailable: 1
+
+ingress:
+  enabled: true
+  className: nginx
+  host: orders.dev.example.com

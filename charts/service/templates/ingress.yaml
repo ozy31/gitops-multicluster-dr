@@ -1,0 +1,44 @@
+{{- if .Values.ingress.enabled }}
+{{- $active := eq (include "service.isActive" .) "true" }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "service.fullname" . }}
+  labels:
+    {{- include "service.labels" . | nindent 4 }}
+  annotations:
+    # Last wave: publish DNS only after the backends exist.
+    argocd.argoproj.io/sync-wave: "2"
+    {{- if .Values.ingress.externalDNS.enabled }}
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.ingress.host | quote }}
+    external-dns.alpha.kubernetes.io/ttl: {{ .Values.ingress.externalDNS.ttl | quote }}
+    {{- if .Values.dr.managed }}
+    # One weighted record per site. The weight follows dr.activeSite, the
+    # same value drswitch writes to Route53 when it manages DNS directly.
+    external-dns.alpha.kubernetes.io/set-identifier: {{ .Values.site.role | quote }}
+    external-dns.alpha.kubernetes.io/aws-weight: {{ ternary "100" "0" $active | quote }}
+    {{- end }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ required "ingress.host is required when ingress.enabled" .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "service.fullname" . }}
+                port:
+                  name: http
+{{- end }}

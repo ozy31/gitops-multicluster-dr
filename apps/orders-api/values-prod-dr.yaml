@@ -1,0 +1,4 @@
+# Overrides for the DR half of prod only (cluster labels env=prod, role=dr).
+# Kept intentionally small: the DR site should look like primary.
+env:
+  PODINFO_UI_COLOR: "#b45309"

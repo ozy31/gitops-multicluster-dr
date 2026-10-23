@@ -1,0 +1,120 @@
+# Default values for the shared service chart. Per-app values live in
+# apps/<name>/values.yaml and apps/<name>/values-<env>.yaml.
+
+# Object names default to the Helm release name (= app directory name).
+fullnameOverride: ""
+
+image:
+  repository: ghcr.io/stefanprodan/podinfo
+  tag: "6.7.1"
+  pullPolicy: IfNotPresent
+
+# Used when autoscaling is disabled and this site is active.
+replicaCount: 2
+
+containerPort: 9898
+args: []
+env: {}
+
+probes:
+  liveness:
+    path: /healthz
+  readiness:
+    path: /readyz
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+# Filled in by the ApplicationSet from the target cluster's labels.
+site:
+  env: dev
+  role: primary
+  region: ""
+
+dr:
+  # Only clusters that belong to a primary/DR pair react to activeSite.
+  managed: false
+  # primary | dr | both. Supplied by dr/active-site.yaml; do not set here
+  # per app.
+  activeSite: primary
+  # Replicas on the standby site. 0 = cold standby (pilot light),
+  # >0 = warm standby that can take traffic immediately.
+  standbyReplicas: 0
+
+autoscaling:
+  hpa:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  keda:
+    enabled: false
+    minReplicaCount: 1
+    maxReplicaCount: 10
+    pollingInterval: 30
+    cooldownPeriod: 300
+    # KEDA trigger list, passed through as-is.
+    triggers: []
+    # Optional TriggerAuthentication using EKS pod identity / IRSA.
+    podIdentityProvider: ""
+
+pdb:
+  enabled: true
+  maxUnavailable: 1
+
+topologySpread:
+  enabled: true
+  # Spread across AZs strictly, across nodes best-effort.
+  zone:
+    maxSkew: 1
+    whenUnsatisfiable: DoNotSchedule
+  host:
+    maxSkew: 1
+    whenUnsatisfiable: ScheduleAnyway
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  host: ""
+  path: /
+  annotations: {}
+  tls: []
+  externalDNS:
+    # Publish a weighted record per site; weight follows dr.activeSite.
+    enabled: false
+    ttl: 60
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+terminationGracePeriodSeconds: 30
+nodeSelector: {}
+tolerations: []
+affinity: {}

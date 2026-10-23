@@ -1,0 +1,55 @@
+{{- /*
+KEDA keeps the ScaledObject on both sites. On the standby it is paused with
+autoscaling.keda.sh/paused-replicas, which scales the Deployment to
+dr.standbyReplicas and stops KEDA from acting on the triggers. Removing the
+annotation (the site becomes active) resumes normal scaling, including from
+zero, so this path also works with server-side apply.
+*/}}
+{{- if .Values.autoscaling.keda.enabled }}
+{{- $active := eq (include "service.isActive" .) "true" }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "service.fullname" . }}
+  labels:
+    {{- include "service.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    # KEDA CRDs come from the platform addons ApplicationSet; do not fail
+    # the dry-run if they are not installed yet on a fresh cluster.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    {{- if not $active }}
+    autoscaling.keda.sh/paused-replicas: {{ .Values.dr.standbyReplicas | quote }}
+    {{- end }}
+spec:
+  scaleTargetRef:
+    name: {{ include "service.fullname" . }}
+  minReplicaCount: {{ .Values.autoscaling.keda.minReplicaCount }}
+  maxReplicaCount: {{ .Values.autoscaling.keda.maxReplicaCount }}
+  pollingInterval: {{ .Values.autoscaling.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.autoscaling.keda.cooldownPeriod }}
+  triggers:
+    {{- range .Values.autoscaling.keda.triggers }}
+    {{- /* useTriggerAuth: true attaches the TriggerAuthentication below. */}}
+    {{- $t := omit . "useTriggerAuth" }}
+    {{- if and $.Values.autoscaling.keda.podIdentityProvider .useTriggerAuth }}
+    {{- $_ := set $t "authenticationRef" (dict "name" (include "service.fullname" $)) }}
+    {{- end }}
+    {{- toYaml (list $t) | nindent 4 }}
+    {{- end }}
+{{- if .Values.autoscaling.keda.podIdentityProvider }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: {{ include "service.fullname" . }}
+  labels:
+    {{- include "service.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  podIdentity:
+    provider: {{ .Values.autoscaling.keda.podIdentityProvider }}
+{{- end }}
+{{- end }}

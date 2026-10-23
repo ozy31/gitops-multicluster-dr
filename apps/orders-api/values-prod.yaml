@@ -1,0 +1,28 @@
+# Shared by both halves of the prod pair (role=primary and role=dr).
+dr:
+  managed: true
+  # Cold standby: no pods on the inactive site. Use 1+ for a warm standby.
+  standbyReplicas: 0
+
+autoscaling:
+  hpa:
+    minReplicas: 3
+    maxReplicas: 12
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+ingress:
+  className: alb
+  host: orders.example.com
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /readyz
+  externalDNS:
+    enabled: true
+    ttl: 60

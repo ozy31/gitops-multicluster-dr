@@ -1,0 +1,3 @@
+autoscaling:
+  keda:
+    maxReplicaCount: 3

@@ -1,0 +1,14 @@
+# The DR half consumes the replicated queue in its own region.
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::111111111111:role/events-worker-dr
+
+autoscaling:
+  keda:
+    triggers:
+      - type: aws-sqs-queue
+        useTriggerAuth: true
+        metadata:
+          queueURL: https://sqs.eu-west-1.amazonaws.com/111111111111/orders-events
+          queueLength: "50"
+          awsRegion: eu-west-1

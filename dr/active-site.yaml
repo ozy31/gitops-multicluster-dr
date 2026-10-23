@@ -1,0 +1,19 @@
+# The single DR switch.
+#
+# The ApplicationSets pass this file to every application chart as an extra
+# Helm values file (see applicationsets/apps.yaml). Charts compare
+# dr.activeSite with the `role` label of the cluster they are rendered for:
+#
+#   activeSite == role   -> full capacity, autoscaling on, DNS weight 100
+#   activeSite == both   -> full capacity on both sites (transition only)
+#   otherwise            -> standbyReplicas (default 0), autoscaling paused,
+#                           DNS weight 0
+#
+# Only clusters whose values set dr.managed=true (prod and prod-dr) react to
+# it; dev and stage ignore it.
+#
+# Change it with `drswitch failover|failback`, not by hand, so the health
+# check, readiness wait, DNS shift and drain run in the right order.
+# See dr/README.md.
+dr:
+  activeSite: primary

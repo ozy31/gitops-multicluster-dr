@@ -1,0 +1,7 @@
+autoscaling:
+  hpa:
+    minReplicas: 2
+    maxReplicas: 4
+
+ingress:
+  host: orders.stage.example.com

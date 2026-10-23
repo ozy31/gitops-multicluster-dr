@@ -1,0 +1,29 @@
+# events-worker: queue consumer without ingress, scaled on SQS queue depth
+# by KEDA. Rendered with the shared chart in charts/service.
+image:
+  repository: ghcr.io/stefanprodan/podinfo
+  tag: "6.7.1"
+
+env:
+  PODINFO_UI_MESSAGE: events-worker
+
+service:
+  enabled: false
+
+autoscaling:
+  keda:
+    enabled: true
+    # CPU/memory triggers cannot scale to zero; the SQS trigger in prod can.
+    minReplicaCount: 1
+    maxReplicaCount: 5
+    pollingInterval: 15
+    cooldownPeriod: 120
+    triggers:
+      - type: cpu
+        metricType: Utilization
+        metadata:
+          value: "75"
+
+pdb:
+  enabled: true
+  maxUnavailable: 1

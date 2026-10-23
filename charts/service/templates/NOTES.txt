@@ -1,0 +1,4 @@
+{{ include "service.fullname" . }} on {{ .Values.site.env }}/{{ .Values.site.role }}
+{{- if .Values.dr.managed }}
+DR: activeSite={{ .Values.dr.activeSite }}, this site active={{ include "service.isActive" . }}
+{{- end }}

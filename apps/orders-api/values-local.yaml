@@ -1,0 +1,19 @@
+# kind demo (hack/kind-up.sh): two local clusters acting as primary and dr.
+dr:
+  managed: true
+  standbyReplicas: 0
+
+autoscaling:
+  hpa:
+    minReplicas: 1
+    maxReplicas: 2
+
+pdb:
+  enabled: false
+
+topologySpread:
+  enabled: false
+
+ingress:
+  className: nginx
+  host: orders.localtest.me
